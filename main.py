@@ -1,7 +1,4 @@
 import cv2
-from ultralytics import YOLO
-import pyttsx3
-import threading
 import time
 
 # --- НАСТРОЙКИ ---
@@ -32,7 +29,7 @@ def speak(text):
 
 # --- ПОДКЛЮЧЕНИЕ КАМЕРЫ ---
 # ИЗМЕНЕНИЕ №1: Твой IP адрес. Добавляем /video в конце!
-video_url = "http://10.0.0.100:8080/video"
+video_url = "http://10.14.240.61:8080/video"
 cap = cv2.VideoCapture(video_url)
 
 # Проверка подключения
@@ -42,14 +39,10 @@ if not cap.isOpened():
 
 last_speak_time = 0
 
-print("СИСТЕМА АКТИВИРОВАНА. Нажми 'q' для выхода.")
+print("Всё готово! Открой на телефоне http://10.14.240.61:5000")
 
-while True:
-    # ИЗМЕНЕНИЕ №2: Очистка буфера (чтобы видео не отставало от реальности)
-    # Мы читаем 5 кадров, но обрабатываем только последний
-    for _ in range(5):
-        cap.grab()
-
+while cap.isOpened():
+    for _ in range(5): cap.grab()
     success, frame = cap.retrieve()
     if not success:
         print("Потеряна связь с камерой...")
@@ -93,10 +86,10 @@ while True:
                         last_speak_time = time.time()
 
     # Показываем результат в окне
-   # cv2.imshow("TACTILE TRANSLATOR - DEMO", frame)
+    cv2.imshow("TACTILE TRANSLATOR - DEMO", frame)
 
-   # if cv2.waitKey(1) & 0xFF == ord('q'):
-    #    break
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
 
 cap.release()
 cv2.destroyAllWindows()
