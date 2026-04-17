@@ -1,0 +1,19 @@
+{
+  "name": "smart-vision-demo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "server": "node server.js",
+    "worker": "python3 yolo_worker.py",
+    "dev": "node server.js",
+    "web:install": "npm --prefix web install",
+    "web:dev": "npm --prefix web run dev",
+    "web:build": "npm --prefix web run build"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "socket.io": "^4.8.0",
+    "socket.io-client": "^4.8.3"
+  }
+}

@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Morse Vision Assist</title>
+    <style>
+      :root {
+        --bg: #0b0f17;
+        --fg: #eef2ff;
+        --muted: #a8b3cf;
+        --card: #121a2a;
+        --accent: #7c3aed;
+        --danger: #ef4444;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+        background: radial-gradient(900px 600px at 20% 0%, #131c31, var(--bg));
+        color: var(--fg);
+      }
+      .wrap {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 16px;
+      }
+      .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 10px 4px 14px;
+      }
+      .title {
+        font-size: 16px;
+        color: var(--muted);
+        letter-spacing: 0.4px;
+      }
+      .status {
+        font-size: 13px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: rgba(255,255,255,0.06);
+        color: var(--muted);
+        border: 1px solid rgba(255,255,255,0.08);
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+      .card {
+        background: rgba(18, 26, 42, 0.78);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 16px;
+        padding: 14px;
+        backdrop-filter: blur(10px);
+      }
+      .detText {
+        font-size: clamp(28px, 5.2vw, 48px);
+        line-height: 1.05;
+        letter-spacing: 0.2px;
+        margin: 0;
+      }
+      .detText.danger {
+        color: #ffe4e6;
+        text-shadow: 0 0 0 rgba(0,0,0,0);
+      }
+      .subRow {
+        margin-top: 10px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .morseLine {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: 16px;
+        color: var(--muted);
+        word-break: break-word;
+      }
+      .anim {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+        min-height: 28px;
+      }
+      .chip {
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.08);
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .sym {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 28px;
+        height: 28px;
+        padding: 0 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(255,255,255,0.12);
+        background: rgba(255,255,255,0.06);
+        color: var(--fg);
+        font-weight: 700;
+      }
+      .sym.on {
+        background: rgba(124, 58, 237, 0.28);
+        border-color: rgba(124, 58, 237, 0.55);
+        box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.08);
+      }
+      .controls {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+      textarea {
+        width: 100%;
+        min-height: 84px;
+        resize: vertical;
+        border-radius: 14px;
+        padding: 12px 12px;
+        border: 1px solid rgba(255,255,255,0.12);
+        background: rgba(255,255,255,0.04);
+        color: var(--fg);
+        outline: none;
+        font-size: 16px;
+      }
+      textarea:focus { border-color: rgba(124, 58, 237, 0.7); }
+      .btnRow {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+      }
+      button {
+        border: 0;
+        border-radius: 14px;
+        padding: 12px 14px;
+        background: linear-gradient(135deg, rgba(124,58,237,0.95), rgba(99,102,241,0.95));
+        color: white;
+        font-weight: 800;
+        letter-spacing: 0.2px;
+        font-size: 15px;
+      }
+      button.secondary {
+        background: rgba(255,255,255,0.06);
+        color: var(--fg);
+        border: 1px solid rgba(255,255,255,0.12);
+      }
+      button:disabled {
+        opacity: 0.55;
+      }
+      .hint {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.25;
+      }
+      .small {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .dangerBar {
+        margin-top: 10px;
+        padding: 10px 12px;
+        border-radius: 14px;
+        background: rgba(239, 68, 68, 0.12);
+        border: 1px solid rgba(239, 68, 68, 0.25);
+        color: #fecaca;
+        font-weight: 800;
+        display: none;
+      }
+      .dangerBar.show { display: block; }
+      @media (min-width: 820px) {
+        .grid { grid-template-columns: 1.15fr 0.85fr; align-items: start; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="header">
+        <div class="title">Morse Vision Assist • Socket.IO + Vibration API</div>
+        <div id="status" class="status">connecting…</div>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <h1 id="detText" class="detText">Ожидание…</h1>
+          <div id="dangerBar" class="dangerBar">ОПАСНО</div>
+
+          <div class="subRow">
+            <div style="flex: 1 1 auto;">
+              <div class="chip">Morse</div>
+              <div id="morseLine" class="morseLine">—</div>
+            </div>
+            <div style="flex: 0 0 auto; min-width: 220px;">
+              <div class="chip">Animation</div>
+              <div id="anim" class="anim"></div>
+            </div>
+          </div>
+
+          <p class="hint" style="margin-top: 12px;">
+            Важно: на Android вибрация обычно требует <b>первого нажатия</b> пользователем. Нажмите “Разрешить вибрацию”.
+          </p>
+          <div class="btnRow" style="margin-top: 10px;">
+            <button id="enableBtn" class="secondary">Разрешить вибрацию</button>
+            <button id="stopBtn" class="secondary">Стоп</button>
+          </div>
+          <div class="small" style="margin-top: 8px;">
+            dot=150ms, gap=100ms, dash=450ms, letter-gap=300ms, word-gap=600ms
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="chip">Manual mode (text → morse → vibrate)</div>
+          <div class="controls" style="margin-top: 10px;">
+            <textarea id="manualText" placeholder="Введите текст (RU/EN). Например: ОПАСНО Человек прямо"></textarea>
+            <div class="btnRow">
+              <button id="manualVibrateBtn">Вибрировать локально</button>
+              <button id="manualBroadcastBtn" class="secondary">Отправить всем (через сервер)</button>
+            </div>
+            <p class="hint">
+              “Локально” — вибрация только на этом телефоне. “Отправить всем” — сервер разошлёт событие всем подключенным клиентам.
+            </p>
+            <div class="chip">Manual Morse</div>
+            <div id="manualMorse" class="morseLine">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
+    <script>
+      // =========================
+      // Timings (ms)
+      // =========================
+      const DOT = 150;
+      const DASH = 450;
+      const GAP = 100;         // gap between symbols in same letter
+      const LETTER_GAP = 300;  // gap between letters
+      const WORD_GAP = 600;    // gap between words
+
+      // =========================
+      // Morse alphabet (RU + EN + digits + basic punctuation)
+      // =========================
+      const MORSE = {
+        // EN
+        "A": ".-", "B": "-...", "C": "-.-.", "D": "-..", "E": ".", "F": "..-.", "G": "--.",
+        "H": "....", "I": "..", "J": ".---", "K": "-.-", "L": ".-..", "M": "--", "N": "-.",
+        "O": "---", "P": ".--.", "Q": "--.-", "R": ".-.", "S": "...", "T": "-", "U": "..-",
+        "V": "...-", "W": ".--", "X": "-..-", "Y": "-.--", "Z": "--..",
+        // digits
+        "0": "-----", "1": ".----", "2": "..---", "3": "...--", "4": "....-", "5": ".....",
+        "6": "-....", "7": "--...", "8": "---..", "9": "----.",
+        // RU
+        "А": ".-", "Б": "-...", "В": ".--", "Г": "--.", "Д": "-..", "Е": ".", "Ж": "...-",
+        "З": "--..", "И": "..", "Й": ".---", "К": "-.-", "Л": ".-..", "М": "--", "Н": "-.",
+        "О": "---", "П": ".--.", "Р": ".-.", "С": "...", "Т": "-", "У": "..-", "Ф": "..-.",
+        "Х": "....", "Ц": "-.-.", "Ч": "---.", "Ш": "----", "Щ": "--.-", "Ъ": "--.--",
+        "Ы": "-.--", "Ь": "-..-", "Э": "..-..", "Ю": "..--", "Я": ".-.-",
+        // punctuation
+        ".": ".-.-.-", ",": "--..--", "?": "..--..", "!": "-.-.--", ":": "---...", ";": "-.-.-.",
+        "(": "-.--.", ")": "-.--.-", "-": "-....-", "/": "-..-.", "\"": ".-..-.", "'": ".----.",
+        "@": ".--.-.", "=": "-...-"
+      };
+
+      function normalizeText(text) {
+        const t = (text || "").toUpperCase().replaceAll("Ё", "Е");
+        return t.trim().replace(/\s+/g, " ");
+      }
+
+      function textToMorse(text) {
+        const t = normalizeText(text);
+        if (!t) return "";
+        const words = [];
+        for (const word of t.split(" ")) {
+          const letters = [];
+          for (const ch of word) {
+            const code = MORSE[ch];
+            if (code) letters.push(code);
+          }
+          if (letters.length) words.push(letters.join(" "));
+        }
+        return words.join(" / ");
+      }
+
+      // Convert ".- / --" into durations for navigator.vibrate()
+      function morseToVibratePattern(morse) {
+        const s = (morse || "").trim();
+        if (!s) return [];
+
+        const pattern = [];
+        const pushVibe = (ms) => {
+          // Vibrate duration
+          pattern.push(ms);
+        };
+        const pushPause = (ms) => {
+          if (ms <= 0) return;
+          // Pause duration (must alternate)
+          pattern.push(ms);
+        };
+
+        // We parse by tokens: dot/dash, letter separators (space), word separators (/)
+        // The morse format we use: letters separated by spaces, words separated by " / ".
+        // We'll build timing using explicit rules.
+        const tokens = s.split("");
+        for (let i = 0; i < tokens.length; i++) {
+          const ch = tokens[i];
+          if (ch === ".") {
+            pushVibe(DOT);
+            // symbol gap if next is dot/dash
+            const next = tokens[i + 1];
+            if (next === "." || next === "-") pushPause(GAP);
+          } else if (ch === "-") {
+            pushVibe(DASH);
+            const next = tokens[i + 1];
+            if (next === "." || next === "-") pushPause(GAP);
+          } else if (ch === "/") {
+            // word separator; ensure we're in pause state
+            pushPause(WORD_GAP);
+          } else if (ch === " ") {
+            // letter separator. Collapse multiple spaces.
+            const prev = tokens[i - 1];
+            const next = tokens[i + 1];
+            if ((prev === "." || prev === "-") && (next && next !== "/" && next !== " ")) {
+              pushPause(LETTER_GAP);
+            }
+          }
+        }
+
+        // Make sure pattern starts with vibrate and alternates properly.
+        // If pattern starts with a pause (possible if morse begins with space), drop it.
+        while (pattern.length && pattern[0] === 0) pattern.shift();
+        return pattern;
+      }
+
+      // =========================
+      // UI + animation
+      // =========================
+      const statusEl = document.getElementById("status");
+      const detTextEl = document.getElementById("detText");
+      const morseLineEl = document.getElementById("morseLine");
+      const animEl = document.getElementById("anim");
+      const dangerBarEl = document.getElementById("dangerBar");
+
+      const enableBtn = document.getElementById("enableBtn");
+      const stopBtn = document.getElementById("stopBtn");
+
+      const manualTextEl = document.getElementById("manualText");
+      const manualMorseEl = document.getElementById("manualMorse");
+      const manualVibrateBtn = document.getElementById("manualVibrateBtn");
+      const manualBroadcastBtn = document.getElementById("manualBroadcastBtn");
+
+      let vibrationUnlocked = false;
+      let animTimerIds = [];
+
+      function clearAnim() {
+        animTimerIds.forEach((id) => clearTimeout(id));
+        animTimerIds = [];
+        animEl.innerHTML = "";
+      }
+
+      function renderAnimSymbols(morse) {
+        clearAnim();
+        const chars = (morse || "").trim().split("");
+        const nodes = [];
+        for (const c of chars) {
+          if (c === "." || c === "-") {
+            const span = document.createElement("span");
+            span.className = "sym";
+            span.textContent = c;
+            animEl.appendChild(span);
+            nodes.push({ type: "sym", node: span, value: c });
+          } else if (c === "/") {
+            const chip = document.createElement("span");
+            chip.className = "chip";
+            chip.textContent = "word";
+            animEl.appendChild(chip);
+            nodes.push({ type: "gap", node: chip, value: "/" });
+          }
+        }
+        return nodes;
+      }
+
+      function playAnim(morse) {
+        const s = (morse || "").trim();
+        if (!s) return;
+
+        const nodes = renderAnimSymbols(s);
+        let t = 0;
+        let prevWasSymbol = false;
+        let prevWasLetterSep = false;
+
+        // Use same parsing as vibration to keep it visually aligned.
+        const tokens = s.split("");
+        for (let i = 0, symIndex = 0; i < tokens.length; i++) {
+          const ch = tokens[i];
+          if (ch === "." || ch === "-") {
+            const dur = ch === "." ? DOT : DASH;
+            const node = nodes.find((n, idx) => n.type === "sym" && idx >= symIndex && n.value === ch);
+            // Instead of find by value (may repeat), we simply toggle by sequential symbol order:
+            const allSyms = Array.from(animEl.querySelectorAll(".sym"));
+            const symNode = allSyms[symIndex++];
+            const onId = setTimeout(() => symNode && symNode.classList.add("on"), t);
+            const offId = setTimeout(() => symNode && symNode.classList.remove("on"), t + dur);
+            animTimerIds.push(onId, offId);
+            t += dur;
+
+            const next = tokens[i + 1];
+            if (next === "." || next === "-") t += GAP;
+            prevWasSymbol = true;
+            prevWasLetterSep = false;
+          } else if (ch === "/") {
+            t += WORD_GAP;
+            prevWasSymbol = false;
+            prevWasLetterSep = false;
+          } else if (ch === " ") {
+            const prev = tokens[i - 1];
+            const next = tokens[i + 1];
+            if ((prev === "." || prev === "-") && (next && next !== "/" && next !== " ")) {
+              t += LETTER_GAP;
+            }
+            prevWasSymbol = false;
+            prevWasLetterSep = true;
+          }
+        }
+      }
+
+      function vibrateMorse(morse) {
+        const pattern = morseToVibratePattern(morse);
+        if (!pattern.length) return false;
+        if (!("vibrate" in navigator)) return false;
+        navigator.vibrate(pattern);
+        playAnim(morse);
+        return true;
+      }
+
+      function setStatus(text) {
+        statusEl.textContent = text;
+      }
+
+      function showDetection(text, morse) {
+        const t = (text || "").trim() || "—";
+        detTextEl.textContent = t;
+        const isDanger = t.toUpperCase().includes("ОПАСНО");
+        dangerBarEl.classList.toggle("show", isDanger);
+        detTextEl.classList.toggle("danger", isDanger);
+        morseLineEl.textContent = (morse || "").trim() || "—";
+      }
+
+      // Unlock vibration with a user gesture (Android Chrome behavior)
+      enableBtn.addEventListener("click", () => {
+        vibrationUnlocked = true;
+        // small test pulse to validate
+        if ("vibrate" in navigator) navigator.vibrate([40, 50, 40]);
+        setStatus("vibration enabled");
+      });
+
+      stopBtn.addEventListener("click", () => {
+        if ("vibrate" in navigator) navigator.vibrate(0);
+        clearAnim();
+      });
+
+      // =========================
+      // Manual mode
+      // =========================
+      function updateManualMorse() {
+        const morse = textToMorse(manualTextEl.value);
+        manualMorseEl.textContent = morse || "—";
+        return morse;
+      }
+      manualTextEl.addEventListener("input", updateManualMorse);
+
+      manualVibrateBtn.addEventListener("click", () => {
+        vibrationUnlocked = true;
+        const morse = updateManualMorse();
+        if (!morse) return;
+        vibrateMorse(morse);
+      });
+
+      // =========================
+      // Socket.IO client
+      // =========================
+      const socket = io({
+        transports: ["websocket", "polling"],
+        reconnection: true,
+        reconnectionDelay: 300,
+        reconnectionDelayMax: 2000
+      });
+
+      socket.on("connect", () => setStatus("connected"));
+      socket.on("disconnect", () => setStatus("disconnected"));
+      socket.on("connect_error", () => setStatus("connect error"));
+
+      socket.on("vibrate", (payload) => {
+        const text = payload && payload.text ? String(payload.text) : "";
+        const morse = payload && payload.morse ? String(payload.morse) : "";
+        showDetection(text, morse);
+
+        // On Android, vibration may require prior gesture; we still show animation/text.
+        if (vibrationUnlocked) {
+          vibrateMorse(morse);
+        } else {
+          clearAnim();
+          // minimal hint in status
+          setStatus("tap 'Разрешить вибрацию'");
+        }
+      });
+
+      manualBroadcastBtn.addEventListener("click", () => {
+        vibrationUnlocked = true;
+        const text = normalizeText(manualTextEl.value);
+        if (!text) return;
+        // Server will echo as 'vibrate' to everyone (including this client)
+        socket.emit("manual_text", { text });
+      });
+
+      // initial manual update
+      updateManualMorse();
+    </script>
+  </body>
+</html>

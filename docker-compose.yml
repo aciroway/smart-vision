@@ -1,0 +1,6 @@
+services:
+  smart-vision:
+    build: .
+    container_name: smart-vision
+    restart: unless-stopped
+    network_mode: host

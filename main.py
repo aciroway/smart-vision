@@ -32,7 +32,7 @@ def speak(text):
 
 # --- ПОДКЛЮЧЕНИЕ КАМЕРЫ ---
 # ИЗМЕНЕНИЕ №1: Твой IP адрес. Добавляем /video в конце!
-video_url = "http://10.14.240.61:8080/video"
+video_url = "http://10.0.0.100:8080/video"
 cap = cv2.VideoCapture(video_url)
 
 # Проверка подключения
@@ -93,10 +93,10 @@ while True:
                         last_speak_time = time.time()
 
     # Показываем результат в окне
-    cv2.imshow("TACTILE TRANSLATOR - DEMO", frame)
+   # cv2.imshow("TACTILE TRANSLATOR - DEMO", frame)
 
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+   # if cv2.waitKey(1) & 0xFF == ord('q'):
+    #    break
 
 cap.release()
 cv2.destroyAllWindows()
