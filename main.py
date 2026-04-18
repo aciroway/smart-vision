@@ -1,34 +1,55 @@
 import cv2
 import time
+import config
 from modules.detector import SmartDetector
 from modules.server import VoiceServer
+from modules.geolocator import CityGuide
 
-# Замени на свой IP из IP Webcam
-VIDEO_URL = "http://10.14.240.61:8080/video"
-
+# Инициализация
 detector = SmartDetector()
 server = VoiceServer()
+guide = CityGuide()
 
-server.start()
-cap = cv2.VideoCapture(VIDEO_URL)
+cap = cv2.VideoCapture(config.VIDEO_URL)
 last_speak = 0
+last_geo_check = 0
 
-print("Всё готово! Открой на телефоне http://10.14.240.61:5000")
+print(">>> Система запущена. Нажмите 'q' для выхода.")
 
+frame_count = 0
 while cap.isOpened():
-    for _ in range(5): cap.grab()
-    success, frame = cap.retrieve()
+    success, frame = cap.read()
     if not success: break
 
-    command = detector.analyze(frame)
+    frame_count += 1
+    # Анализируем только каждый 5-й кадр
+    if frame_count % 5 == 0:
+        if time.time() - last_speak > config.SPEAK_COOLDOWN:
+            command = detector.analyze(frame)
+            if command:
+                server.emit(command)
+                last_speak = time.time()
 
-    if command and (time.time() - last_speak > 3):
-        server.emit(command)
-        print(f"Голос: {command}")
-        last_speak = time.time()
 
-    cv2.imshow("Tactile System", frame)
-    if cv2.waitKey(1) & 0xFF == ord('q'): break
+    # 1. Зрение (каждые 3 секунды)
+    if time.time() - last_speak > config.SPEAK_COOLDOWN:
+        command = detector.analyze(frame)
+        if command:
+            server.emit(command)
+            last_speak = time.time()
+
+    # 2. Геолокация (раз в минуту)
+    if time.time() - last_geo_check > config.GEO_INTERVAL:
+        address = guide.get_current_location()
+        if address:
+            server.emit(address)
+            print(f"ЛОКАЦИЯ: {address}")
+        last_geo_check = time.time()
+
+    # Визуализация
+    cv2.imshow("Tactile Vision", frame)
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
 
 cap.release()
 cv2.destroyAllWindows()

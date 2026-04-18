@@ -1,31 +1,50 @@
 import cv2
 from ultralytics import YOLO
+import config
 
 
 class SmartDetector:
-    def __init__(self, model_path='yolov8n.pt'):
-        self.model = YOLO(model_path)
-        # Навигационные фразы
+    def __init__(self):
+        self.model = YOLO(config.MODEL_PATH)
+        # Добавь в словарь навигации больше "препятствий"
         self.nav_logic = {
-            'person': 'Впереди человек',
-            'chair': 'Препятствие',
-            'door': 'Дверь',
-            'bottle': 'Бутылка на пути'
+            'person': 'пешеход',
+            'chair': 'препятствие',
+            'table': 'препятствие',
+            'door': 'дверь',
+            'wall': 'препятствие',  # YOLOv8 иногда может путать, но добавим
+            'tvmonitor': 'препятствие'  # Телевизоры на стенах часто мешают
+
         }
 
     def analyze(self, frame):
-        results = self.model.track(frame, stream=True, imgsz=320, verbose=False)
+        # Уменьшаем verbose, чтобы не спамить в консоль
+        results = self.model.track(frame, imgsz=config.IMG_SIZE, conf=config.CONF_LEVEL, verbose=False)
+
         for r in results:
-            for box in r.boxes:
-                if box.conf[0] > 0.5:
-                    cls = int(box.cls[0])
-                    name_en = self.model.names[cls]
+            # Сортируем объекты по уверенности, берем самый надежный
+            boxes = sorted(r.boxes, key=lambda x: x.conf[0], reverse=True)
 
-                    # Определяем сторону
-                    x_center = (box.xyxy[0][0] + box.xyxy[0][2]) / 2
-                    side = "слева" if x_center < 210 else "справа" if x_center > 430 else "прямо"
+            for box in boxes:
+                conf = box.conf[0]
+                cls = int(box.cls[0])
+                name_en = self.model.names[cls]
 
-                    # Если есть в словаре навигации — возвращаем фразу
-                    if name_en in self.nav_logic:
-                        return f"{self.nav_logic[name_en]} {side}"
+                # Фильтр: если это пешеход, но уверенность ниже 0.7 — игнорим
+                if name_en == 'person' and conf < 0.7:
+                    continue
+
+                # Определяем сторону
+                x_center = (box.xyxy[0][0] + box.xyxy[0][2]) / 2
+
+                # Настройка зон (можешь подкрутить цифры под свой экран)
+                if x_center < 150:
+                    side = "слева"
+                elif x_center > 490:
+                    side = "справа"
+                else:
+                    side = "прямо"
+
+                if name_en in self.nav_logic:
+                    return f"{self.nav_logic[name_en]} {side}"
         return None
